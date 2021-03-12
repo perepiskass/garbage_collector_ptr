@@ -36,12 +36,12 @@ class GCP
             
             m_first = false;
 
-            auto p = findPtrInfo(ptr);
+            auto p = findPtrInfo(m_addr);
             if(p != m_gcList.end())     /// если указатель ptr уже есть в списке, то увеличиваем счетчик ссылок на 1
                 p->m_refCount++;
             else
             {
-                m_gcList.emplace_front(ptr, SIZE);  /// если нет, то создаем новый элемент в списке
+                m_gcList.emplace_front(m_addr, SIZE);  /// если нет, то создаем новый элемент в списке
             }
 #ifdef DISPLAY
             std::cout << "Constructor GCP. ";
@@ -53,16 +53,46 @@ class GCP
         }
 
         /// Копирующий конструктоа
-        GCP(const GCP& gcp_ptr):m_addr(gcp_ptr.m_addr), m_isArray(gcp_ptr.m_isArray), m_arraSize(gcp_ptr.m_arraSize)
+        GCP(const GCP& _gcp):m_addr(_gcp.m_addr), m_isArray(_gcp.m_isArray), m_arraSize(_gcp.m_arraSize)
         {
-            auto p = findPtrInfo(gcp_ptr.m_addr);
-            p->m_refCount++;
+                auto p = findPtrInfo(_gcp.m_addr);
+                p->m_refCount++;
 #ifdef DISPLAY
-            std::cout << "Copy constructor GCP. ";
+                std::cout << "Copy constructor GCP. ";
+                if(m_isArray)
+                    std::cout << "Size is " << m_arraSize << std::endl;
+                else
+                    std::cout << std::endl;
+                std::cout << "Aftre copybale constructor \n";
+                showlist();    
+#endif           
+        }
+
+        /// Присваивающий конструктор
+        GCP(GCP&& _gcp):m_addr(_gcp.m_addr), m_isArray(_gcp.m_isArray), m_arraSize(_gcp.m_arraSize)
+        {
+            auto it = findPtrInfo(_gcp.m_addr)
+            if(it != m_gcList.end())
+                it->refCount++;
+            else
+            {
+                m_gcList.emplace_front(m_addr, SIZE);
+            }
+            if(_gcp != nullptr)
+            {
+                _gcp.m_addr = nullptr;          /// обнуляем значение ссылки и увеличиваем счетчик значений на nullptr
+                auto it = findPtrInfo(_gcp.m_addr);
+                it->m_refCount++;
+            }
+            
+#ifdef DISPLAY
+            std::cout << "Assign constructor GCP. ";
             if(m_isArray)
                 std::cout << "Size is " << m_arraSize << std::endl;
             else
                 std::cout << std::endl;    
+            std::cout << "Aftre assign constructor \n";
+            showlist();    
 #endif           
         }
 
@@ -71,8 +101,9 @@ class GCP
         /// ФУНКЦИЯ СБОРА МУСОРА, вызывается в тот момент когда требуется обработать адреса памяти, и освободить память на которую указвает 0 ссылок
         static bool collect();
 
-        T* operator= (T* ptr); 
-        GCP& operator= (GCP& right);
+        GCP& operator= (T* ptr); 
+        GCP& operator= (GCP& _gcp);
+        GCP& operator= (GCP&& _gcp);
 
         T& operator*()
         {
@@ -127,15 +158,17 @@ template<typename T, size_t SIZE>
 template<typename T, size_t SIZE>
 GCP<T, SIZE>::~GCP()
 {
-    auto p = findPtrInfo(m_addr);
-    if(p->m_refCount)           /// если счетчик ссылок на данную область памяти не пуст, уменьшаем его
-        p->m_refCount--;
+        auto p = findPtrInfo(m_addr);
+        if(p != m_gcList.end())
+        {
+            if(p->m_refCount)           /// если счетчик ссылок на данную область памяти не пуст, уменьшаем его
+                p->m_refCount--;
 
 #ifdef DISPLAY
-    std::cout << "Destructor GCP\n";
+        std::cout << "Destructor GCP\n";
 #endif
-
-    collect();  /// вызываем функцию сбора мусора
+        }
+        collect();  /// вызываем функцию сбора мусора если объект GCP указывает на валидный адрес
 }
 
 
@@ -191,48 +224,76 @@ bool GCP<T, SIZE>::collect()
     std::cout << "After garbage collector for ";
     showlist();
 #endif
-
     return memfreed;
 }
 
 template<typename T, size_t SIZE>
-T* GCP<T, SIZE>::operator=(T* ptr)
+GCP<T, SIZE>& GCP<T, SIZE>::operator=(T* ptr)
 {
-    
-    auto it = findPtrInfo(m_addr);
-    it->m_refCount--;               /// уменьшаем кол-во ссылок на которое сейчас указывал GCP
-
-    it = findPtrInfo(ptr);          /// ищем в списке новый адресс
-    if(it != m_gcList.end())
-        it->m_refCount++;           /// если есть, увеличиваем его счетчик ссылок,
-    else
-    {
-        m_gcList.emplace_front(ptr, SIZE);  /// если нет, создаем новый элемент в списке
-    }
-    m_addr = ptr;
-    
-    return ptr;
-}
-
-template<typename T, size_t SIZE>
-GCP<T, SIZE>& GCP<T, SIZE>::operator=(GCP& right)
-{
-    if(m_addr != right.m_addr)          /// если адреса на которые смотрят указатели GCP разные то выполняем
+    if(m_addr != ptr)
     {
         auto it = findPtrInfo(m_addr);
         it->m_refCount--;               /// уменьшаем кол-во ссылок на которое сейчас указывал GCP
 
-        it = findPtrInfo(right.m_addr)  /// ищем в списке новый адресс
+        it = findPtrInfo(ptr);          /// ищем в списке новый адресс
         if(it != m_gcList.end())
             it->m_refCount++;           /// если есть, увеличиваем его счетчик ссылок,
         else
         {
-            m_gcList.emplace_front(right.m_addr, SIZE);  /// если нет, создаем новый элемент в списке
+            m_gcList.emplace_front(ptr, SIZE);  /// если нет, создаем новый элемент в списке
         }
-        m_addr = right.m_addr;
+        m_addr = ptr;
     }
+#ifdef DISPLAY
+                    std::cout << "Operator = for (T*): "
+                              << "ptr = ["<< (void*)ptr <<']' << " m_addr = [" << (void*)m_addr << ']' << std::endl;
+#endif
+    return *this;
+}
 
-    return right;
+template<typename T, size_t SIZE>
+GCP<T, SIZE>& GCP<T, SIZE>::operator=(GCP& _gcp)
+{
+    if(m_addr != _gcp.m_addr)          /// если адреса на которые смотрят указатели GCP разные то выполняем
+    {
+        auto it = findPtrInfo(m_addr);
+        it->m_refCount--;               /// уменьшаем кол-во ссылок на которое сейчас указывал GCP
+        it = findPtrInfo(_gcp.m_addr);  /// ищем в списке новый адресс
+        it->m_refCount++;           /// если есть, увеличиваем его счетчик ссылок,
+        m_addr = _gcp.m_addr;
+    }
+#ifdef DISPLAY
+                    std::cout << "Operator= copybale "
+                              << "right = ["<< (void*)_gcp.m_addr <<']' << " left = [" << (void*)m_addr << ']' << std::endl;
+#endif
+    return *this;
+}
+
+/// Оператор присваивающего копирования
+template<typename T, size_t SIZE>
+GCP<T, SIZE>& GCP<T, SIZE>::operator=(GCP&& _gcp)
+{
+
+    if(m_addr != _gcp.m_addr)          /// если адреса на которые смотрят указатели GCP разные то выполняем
+    {
+        auto it = findPtrInfo(m_addr);
+        it->m_refCount--;               /// уменьшаем кол-во ссылок на которое сейчас указывал GCP
+        m_addr = _gcp.m_addr;
+    }
+    else
+    {
+        auto it = findPtrInfo(m_addr);
+        it->m_refCount--;               /// уменьшаем кол-во ссылок на которое сейчас указывал GCP
+    }
+#ifdef DISPLAY
+                    std::cout << "Operator= assign "
+                              << "right&& = ["<< (void*)_gcp.m_addr <<']' << " left = [" << (void*)m_addr << ']' << std::endl;
+#endif
+    _gcp.m_addr = nullptr;          /// обнуляем значение ссылки и увеличиваем счетчик значений на nullptr
+    auto it = findPtrInfo(_gcp.m_addr);
+    it->m_refCount++;
+
+    return *this;
 }
 
 template<typename T, size_t SIZE>
