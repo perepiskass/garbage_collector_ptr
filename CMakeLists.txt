@@ -1,7 +1,7 @@
 # определяем минимальную версию для компиляции
 cmake_minimum_required(VERSION 3.5)
 project(garbage_collector CXX)
-set(TARGET libgcp)
+set(TARGET test_gcp)
 
 # --------------------------------------------------------------------------
 if(MSVC)
@@ -16,15 +16,18 @@ add_subdirectory(
     "${CMAKE_CURRENT_SOURCE_DIR}/test"
 )
 # --------------------------------------------------------------------------
-set(Headers 
+set(HEADER_FILE_ONLY 
     "${CMAKE_SOURCE_DIR}/include/gcp.h"
     "${CMAKE_SOURCE_DIR}/include/info_unit.h"
     "${CMAKE_SOURCE_DIR}/include/iterator.h"
 )
+set(SOURCE_DIR
+    "${CMAKE_SOURCE_DIR}/source/main.cpp"
+)
 
-add_library(
-    ${TARGET} STATIC
-    ${Headers}
+add_executable(
+    ${TARGET}
+    ${SOURCE_DIR}
 )
 
 # --------------------------------------------------------------------------

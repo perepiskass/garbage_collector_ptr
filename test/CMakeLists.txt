@@ -18,7 +18,6 @@ target_link_libraries(
     gtest_main
     gmock
     gmock_main
-    # libgcp
 )
 
 set_target_properties(
