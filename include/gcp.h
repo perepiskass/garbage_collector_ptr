@@ -117,7 +117,7 @@ class GCP
             return m_addr[idx];
         }
 
-        operator T*()
+        operator T*()   /// ОПАСНОЕ ПРИВЕДЕНИЕ, ПЕРЕДАЧА УКАЗАТЕЛЯ, ВЫЗЫВАЮЩИЙ КОД МОЖЕТ ВЫЗВАТЬ DELETE
         {
             return m_addr;
         }
