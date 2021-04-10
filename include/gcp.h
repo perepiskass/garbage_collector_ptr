@@ -71,9 +71,9 @@ class GCP
         /// Присваивающий конструктор
         GCP(GCP&& _gcp):m_addr(_gcp.m_addr), m_isArray(_gcp.m_isArray), m_arraSize(_gcp.m_arraSize)
         {
-            auto it = findPtrInfo(_gcp.m_addr)
-            if(it != m_gcList.end())
-                it->refCount++;
+            auto p = findPtrInfo(_gcp.m_addr);
+            if(p != m_gcList.end())
+                p->m_refCount++;
             else
             {
                 m_gcList.emplace_front(m_addr, SIZE);

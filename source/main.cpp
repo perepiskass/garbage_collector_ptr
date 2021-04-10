@@ -1,28 +1,35 @@
 #include <iostream>
 #include "gcp.h"
+#include <vector>
 
 int main()
 {
-    {
-    GCP<int> a(new int(77));
-    GCP<int> d(new int(55));
-    GCP<int> pp;
-    GCP<int> p(pp);
-
     try
     {
-        p = new int(33);
-        p = std::move(a);
-        int* ptr_i = new int(99);
-        p = ptr_i;
+        std::vector<GCP<int>> vec;
+        vec.reserve(3);
+        std::cout << "Capacity vector " << vec.capacity() << std::endl;
+        vec.emplace_back(new int(1));
+        vec.emplace_back(new int(2));
+        vec.emplace_back(new int(3));
+
+        for(auto& i : vec)
+            std::cout << *i << std::endl;
+
+        std::cout << "+++++++++++++++++++++++++++++++++++++++" << std::endl;
+        vec.emplace_back(new int(4));
+        std::cout << "Capacity vector " << vec.capacity() << std::endl;
+        for(auto& i : vec)
+            std::cout << *i << std::endl;
+        
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }
+    
 
-    std::cout << "Value at p is: " << *p << std::endl;
-    }
+
 
 
     return 0;
